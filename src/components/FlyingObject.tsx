@@ -23,13 +23,18 @@ export default function FlyingObject({ onHit }: FlyingObjectProps) {
             const currentPosition = targetRef.current.translation();
 
             // 方向ベクトルを計算
-            const direction = targetPosition.clone().sub(new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z)).normalize();
+            const direction = targetPosition
+                .clone()
+                .sub(new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z))
+                .normalize();
 
             // 新しい位置を計算
-            const newPosition = new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z).add(direction.multiplyScalar(speed * delta));
+            const newPosition = new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z).add(
+                direction.multiplyScalar(speed * delta)
+            );
 
             // 新しい位置を更新
-            targetRef.current.setTranslation(newPosition, true);
+            targetRef.current.setTranslation({ x: newPosition.x, y: newPosition.y, z: newPosition.z }, true);
 
             // 目標位置に近づいた場合、初期位置にリセット
             if (newPosition.distanceTo(targetPosition) < 0.1) {
@@ -44,15 +49,24 @@ export default function FlyingObject({ onHit }: FlyingObjectProps) {
             type="dynamic"
             onCollisionEnter={(event) => {
                 console.log(event);
-                if (event.colliderObject?.name === "sword") {
+                if (event.colliderObject && event.colliderObject.name === "sword") {
                     console.log("test");
                     onHit(); // ヒット時の処理を呼び出し
                     setIsVisible(false); // オブジェクトを非表示にする
+
+                    if (targetRef.current) {
+                        // 衝突後にランダムな位置に移動
+                        targetRef.current.setTranslation(
+                            {
+                                x: Math.random() * 5 - 2.5, // ランダムなX位置
+                                y: 6, // 固定のY位置
+                                z: Math.random() * 5 - 2.5, // ランダムなZ位置
+                            },
+                            true
+                        );
+                    }
+
                     setTimeout(() => {
-                        if (targetRef.current) {
-                            // RigidBodyの位置を初期位置にリセット
-                            targetRef.current.setTranslation(initialPosition, true);
-                        }
                         setIsVisible(true); // オブジェクトを再表示する
                     }, 3000); // 3秒後に再表示
                     console.log("Collision with sword detected!");

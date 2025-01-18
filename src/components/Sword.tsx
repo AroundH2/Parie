@@ -14,10 +14,10 @@ export default function Sword() {
 
     useFrame(() => {
         if (rightController) {
-            const rightObject = rightController?.object;
             const rightSqueezeState = rightController.gamepad["xr-standard-squeeze"];
 
-            if (rightObject && rightSqueezeState?.state == "pressed") {
+            if (rightController?.object && rightSqueezeState?.state == "pressed") {
+                const rightObject = rightController.object;
                 isGrabbing = true;
                 const rightPosition = new THREE.Vector3();
                 const rightRotation = new THREE.Quaternion();

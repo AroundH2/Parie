@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useFrame } from "@react-three/fiber"; // `useXRInputSourceState`もインポート
+import { useFrame } from "@react-three/fiber"; // useXRInputSourceStateもインポート
 import * as THREE from "three";
 import { createXRStore, XR, XROrigin, useXRInputSourceState } from "@react-three/xr";
 import { Physics, RigidBody, RapierRigidBody } from "@react-three/rapier";
@@ -7,6 +7,8 @@ import { Physics, RigidBody, RapierRigidBody } from "@react-three/rapier";
 // 剣のコンポーネント
 export default function Sword() {
     const swordRef = useRef<RapierRigidBody>(null);
+    const upperSwordRef = useRef<RapierRigidBody>(null);  // 上半身部分
+    const lowerSwordRef = useRef<RapierRigidBody>(null);  // 下半身部分
     const leftController = useXRInputSourceState("controller", "left"); // 左手のコントローラー
     const rightController = useXRInputSourceState("controller", "right"); // 右手のコントローラー
 
@@ -33,9 +35,13 @@ export default function Sword() {
                 // コントローラーの回転に補正を加える
                 rightRotation.multiply(correctionQuaternion);
 
-                if (swordRef.current) {
-                    swordRef.current.setTranslation({ x: rightPosition.x, y: rightPosition.y, z: rightPosition.z }, true);
-                    swordRef.current.setRotation({ x: rightRotation.x, y: rightRotation.y, z: rightRotation.z, w: rightRotation.w }, true);
+                if (upperSwordRef.current && lowerSwordRef.current) {
+
+                    upperSwordRef.current.setTranslation({ x: rightPosition.x, y: rightPosition.y, z: rightPosition.z }, true);
+                    upperSwordRef.current.setRotation({ x: rightRotation.x, y: rightRotation.y, z: rightRotation.z, w: rightRotation.w }, true);
+
+                    lowerSwordRef.current.setTranslation({ x: rightPosition.x, y: rightPosition.y, z: rightPosition.z }, true);
+                    lowerSwordRef.current.setRotation({ x: rightRotation.x, y: rightRotation.y, z: rightRotation.z, w: rightRotation.w }, true);
                 }
             } else {
                 isGrabbing = false;
@@ -45,19 +51,43 @@ export default function Sword() {
 
     return (
         <>
-            <XROrigin>
-                <RigidBody
-                    ref={swordRef}
-                    position={[0, 0, 0]}
-                    type="dynamic"
-                    name="sword" // 衝突判定のための名前を設定
-                >
-                    <mesh position={[0, 0, 0]} castShadow>
-                        <boxGeometry args={[0.2, 1, 0.2]} />
-                        <meshStandardMaterial color="#00f" />
-                    </mesh>
-                </RigidBody>
-            </XROrigin>
+            <RigidBody
+                ref={swordRef}
+                position={[0, 0, 0]}
+                type="dynamic"
+                name="sword" // 衝突判定のための名前を設定
+            >
+                <mesh position={[0, 0, 0]} castShadow>
+                    <boxGeometry args={[0.2, 1, 0.2]} />
+                    <meshStandardMaterial color="#00f" />
+                </mesh>
+            </RigidBody>
+
+            {/* 剣の上半身部分 */}
+            <RigidBody
+                ref={upperSwordRef}
+                position={[0, -0.7, 0]}
+                type="fixed"
+                name="upper_sword"
+            >
+                <mesh position={[0, -0.7, 0]} castShadow>
+                    <boxGeometry args={[0.2, 0.3, 0.2]} />
+                    <meshStandardMaterial color="#00f" />
+                </mesh>
+            </RigidBody>
+
+            {/* 剣の下半身部分 */}
+            <RigidBody
+                ref={lowerSwordRef}
+                position={[0, -0.25, 0]}
+                type="fixed"
+                name="lower_sword"
+            >
+                <mesh position={[0, -0.25, 0]} castShadow>
+                    <boxGeometry args={[0.2, 0.63, 0.2]} />
+                    <meshStandardMaterial color="#00f" />
+                </mesh>
+            </RigidBody>
         </>
     );
 }

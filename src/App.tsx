@@ -4,23 +4,40 @@ import { OrbitControls, Plane } from "@react-three/drei";
 import Sword from "./components/Sword";
 import FlyingObject from "./components/FlyingObject";
 import Lighting from "./components/Lighting";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import * as THREE from "three";
 import { createXRStore, XR } from "@react-three/xr";
 import { Physics } from "@react-three/rapier"; // Import Physics
+import hitSound from './assets/mp3/hit-sound.mp3';
 
 const store = createXRStore();
 
 function App() {
-  const [audio] = useState(() => new Audio("/mp3/hit-sound.mp3"));
+  const successaudioRef = useRef<HTMLAudioElement | null>(null);
+  const failaudioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (!successaudioRef.current) {
+      const audio = new Audio("./mp3/hit-sound.mp3");
+      successaudioRef.current = audio;
+    }
+  }, []);
 
   useEffect(() => {
-    audio.volume = 0.5;
-  }, [audio]);
+    if (!failaudioRef.current) {
+      const audio = new Audio("./mp3/fail-sound.mp3");
+      failaudioRef.current = audio;
+    }
+  }, []);
 
-  const handleHit = () => {
-    audio.currentTime = 0;
-    audio.play();
+  const handleHit = (part: string) => {
+    console.log(part);
+    if (part === "upper" && successaudioRef.current) {
+      successaudioRef.current.currentTime = 0;
+      successaudioRef.current.play();
+    } else if (part === "lower" && failaudioRef.current) {
+      failaudioRef.current.currentTime = 0;
+      failaudioRef.current.play();
+    }
   };
 
   return (

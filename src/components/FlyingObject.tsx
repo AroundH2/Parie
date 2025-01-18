@@ -1,10 +1,11 @@
+// FlyingObject.tsx
 import { useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { RigidBody, RapierRigidBody } from "@react-three/rapier";
 
 interface FlyingObjectProps {
-    onHit: () => void;
+    onHit: (part: "upper" | "lower") => void; // onHitの引数と戻り値の型を指定
 }
 
 export default function FlyingObject({ onHit }: FlyingObjectProps) {
@@ -47,28 +48,34 @@ export default function FlyingObject({ onHit }: FlyingObjectProps) {
         <RigidBody
             ref={targetRef} // 1つのrefでRigidBodyを管理
             type="dynamic"
+
             onCollisionEnter={(event) => {
                 console.log(event);
-                if (event.colliderObject && event.colliderObject.name === "sword") {
-                    console.log("test");
-                    onHit(); // ヒット時の処理を呼び出し
-                    setIsVisible(false); // オブジェクトを非表示にする
-
-                    if (targetRef.current) {
-                        // 衝突後にランダムな位置に移動
-                        targetRef.current.setTranslation(
-                            {
-                                x: Math.random() * 5 - 2.5, // ランダムなX位置
-                                y: 6, // 固定のY位置
-                                z: Math.random() * 5 - 2.5, // ランダムなZ位置
-                            },
-                            true
-                        );
+                const colliderName = (event.colliderObject as any).name; // 型アサーションで名前を取得
+                console.log(colliderName);
+                if (event.colliderObject && event.colliderObject.name) {
+                    // オブジェクトを非表示にする
+                    // nameをstring型で取得し、"sword"と比較
+                    if (colliderName === "upper_sword") {
+                        onHit("upper");
+                    } else if (colliderName === "lower_sword") {
+                        onHit("lower");
                     }
+                    // 衝突方向を計算し、物体を反発させる
+                    if (targetRef.current) {
+                        const impulseDirection = new THREE.Vector3(1, 1, 1);
+                        const impulseForce = 1; // 力の大きさ
+                        const impulse = new THREE.Vector3().copy(impulseDirection).normalize().multiplyScalar(impulseForce);
+
+                        targetRef.current.applyImpulse(impulse, true);
+                    }
+                    setTimeout(() => {
+                        setIsVisible(false); // オブジェクトを再表示する
+                    }, 1000);
 
                     setTimeout(() => {
                         setIsVisible(true); // オブジェクトを再表示する
-                    }, 3000); // 3秒後に再表示
+                    }, 2000); // 3秒後に再表示
                     console.log("Collision with sword detected!");
                 }
             }}

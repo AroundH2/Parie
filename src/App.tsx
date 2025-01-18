@@ -1,11 +1,43 @@
 import "./App.css";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Plane } from "@react-three/drei";
+import Sword from "./components/Sword";
+import FlyingObject from "./components/FlyingObject";
+import Lighting from "./components/Lighting";
+import { useState, useEffect } from "react";
 import * as THREE from "three";
+import { createXRStore, XR } from "@react-three/xr";
+import { Physics } from "@react-three/rapier"; // Import Physics
+
+const store = createXRStore();
 
 function App() {
+  const [audio] = useState(() => new Audio("/mp3/hit-sound.mp3"));
+
+  useEffect(() => {
+    audio.volume = 0.5;
+  }, [audio]);
+
+  const handleHit = () => {
+    audio.currentTime = 0;
+    audio.play();
+  };
+
   return (
     <>
+      <button
+        onClick={() => store.enterVR()}
+        style={{
+          position: "fixed",
+          top: "10px",
+          left: "10px",
+          zIndex: 1000,
+          height: "100px",
+          width: "200px",
+        }}
+      >
+        Enter VR
+      </button>
       <Canvas
         camera={{
           position: [0, 5, 8],
@@ -17,28 +49,21 @@ function App() {
         shadows
         style={{ width: "100vw", height: "100vh" }}
       >
-        {/* 背景色 */}
-        <color attach="background" args={["#DDDDDD"]} />
-        {/* カメラの操作 */}
-        <OrbitControls />
-        {/* ライトの設定 */}
-        <ambientLight intensity={0.1} />
-        <directionalLight
-          position={[2, 6, 4]}
-          intensity={1}
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          castShadow
-        />
-        {/* オブジェクト */}
-        <mesh position={[0, 1, 0]} castShadow>
-          <boxGeometry args={[1, 1, 1]} />
-          <meshStandardMaterial color="#f00" />
-        </mesh>
-        {/* 床 */}
-        <Plane rotation={[-Math.PI / 2, 0, 0]} args={[10, 10]} receiveShadow>
-          <meshStandardMaterial color="#fff" side={THREE.DoubleSide} />
-        </Plane>
+        {/* XRコンポーネントをここでラップする */}
+        <XR store={store}>
+          <color attach="background" args={["#DDDDDD"]} />
+          <OrbitControls />
+          <Lighting />
+
+          <Physics gravity={[0, 0, 0]}>
+            <Sword />
+            <FlyingObject onHit={handleHit} />
+          </Physics>
+
+          <Plane rotation={[-Math.PI / 2, 0, 0]} args={[10, 10]} receiveShadow>
+            <meshStandardMaterial color="#fff" side={THREE.DoubleSide} />
+          </Plane>
+        </XR>
       </Canvas>
     </>
   );

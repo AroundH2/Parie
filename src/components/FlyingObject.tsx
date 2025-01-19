@@ -1,4 +1,3 @@
-// FlyingObject.tsx
 import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
@@ -18,15 +17,52 @@ export default function FlyingObject({ onHit, upperSpeed }: FlyingObjectProps) {
     const [speed, setSpeed] = useState(2);
     const [isVisible, setIsVisible] = useState(true);
 
+    const [hitEffect, setHitEffect] = useState(false);
+    const [geometryType, setGeometryType] = useState<'box' | 'sphere' | 'cylinder'>('box');
+    const [geometryArgs, setGeometryArgs] = useState<[number, number, number] | [number] | [number, number, number, number]>([0.3, 0.3, 0.3]);
+
     const randomizeObject = () => {
-        // X座標: -5 ~ -3, Y座標: 0.5 ~ 2 の範囲でランダム化
         const randomX = THREE.MathUtils.randFloat(-5, -3);
         const randomY = THREE.MathUtils.randFloat(0.5, 2);
         setInitialPosition(new THREE.Vector3(randomX, randomY, 0));
 
-        // 速度を1.5 ~ 3.0の範囲でランダム化
-        const randomSpeed = THREE.MathUtils.randFloat(1.5, 3.0);
+        const randomSpeed = THREE.MathUtils.randFloat(2.0, 6.0);
         setSpeed(randomSpeed);
+
+        const shapes: ("box" | "sphere" | "cylinder")[] = ['box', 'sphere', 'cylinder'];
+        const randomShape = shapes[Math.floor(Math.random() * shapes.length)];
+
+        setGeometryType(randomShape);
+
+        switch (randomShape) {
+            case 'box':
+                const boxWidth = THREE.MathUtils.randFloat(0.2, 0.3);
+                const boxHeight = THREE.MathUtils.randFloat(0.2, 0.3);
+                const boxDepth = THREE.MathUtils.randFloat(0.2, 0.3);
+                setGeometryArgs([boxWidth, boxHeight, boxDepth]);
+                break;
+            case 'sphere':
+                const sphereRadius = THREE.MathUtils.randFloat(0.2, 0.25);
+                setGeometryArgs([sphereRadius]);
+                break;
+            case 'cylinder':
+                const radiusTop = THREE.MathUtils.randFloat(0.1, 0.3);
+                const radiusBottom = THREE.MathUtils.randFloat(0.1, 0.3);
+                const height = THREE.MathUtils.randFloat(0.3, 0.5);
+                const radialSegments = 10; // セグメント数
+                setGeometryArgs([radiusTop, radiusBottom, height, radialSegments]);
+                break;
+        }
+    };
+
+    const triggerHitEffect = (part: string) => {
+        if (part === "upper") {
+            setHitEffect(true);
+            onHit(part);
+            // 即座にhitEffectをfalseに設定
+        } else {
+            console.error("Invalid part value:", part);
+        }
     };
 
     useEffect(() => {
@@ -35,25 +71,19 @@ export default function FlyingObject({ onHit, upperSpeed }: FlyingObjectProps) {
 
     useFrame((state, delta) => {
         if (targetRef.current && isVisible) {
-
-            // RigidBodyの現在の位置を取得し、THREE.Vector3に変換
             const currentPosition = targetRef.current.translation();
 
-            // 方向ベクトルを計算
             const direction = targetPosition
                 .clone()
                 .sub(new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z))
                 .normalize();
 
-            // 新しい位置を計算
             const newPosition = new THREE.Vector3(currentPosition.x, currentPosition.y, currentPosition.z).add(
                 direction.multiplyScalar(speed * delta)
             );
 
-            // 新しい位置を更新
             targetRef.current.setTranslation({ x: newPosition.x, y: newPosition.y, z: newPosition.z }, true);
 
-            // 目標位置に近づいた場合、初期位置にリセット
             if (newPosition.distanceTo(targetPosition) < 0.1) {
                 targetRef.current.setTranslation(initialPosition, true);
             }
@@ -62,23 +92,20 @@ export default function FlyingObject({ onHit, upperSpeed }: FlyingObjectProps) {
 
     return isVisible ? (
         <RigidBody
-            ref={targetRef} // 1つのrefでRigidBodyを管理
+            ref={targetRef}
             type="dynamic"
-
             onCollisionEnter={(event) => {
-                console.log(event);
-                const colliderName = (event.colliderObject as any).name; // 型アサーションで名前を取得
-                console.log(colliderName);
+                if (!isVisible) return; // 非表示中は処理しない
+                const colliderName = (event.colliderObject as any).name;
                 if (event.colliderObject && event.colliderObject.name) {
-                    // オブジェクトを非表示にする
-                    // nameをstring型で取得し、"sword"と比較
                     if (colliderName === "upper_sword" && upperSpeed > 1.0) {
-                        console.log("obj1" + upperSpeed);
+                        triggerHitEffect("upper");
                         onHit("upper");
                     } else {
-                        console.log("obj2" + upperSpeed);
+                        triggerHitEffect("lower");
                         onHit("lower");
                     }
+
                     // 衝突方向を計算し、物体を反発させる
                     if (targetRef.current) {
                         // 衝突点の法線ベクトルを計算（相対位置から推定）
@@ -110,27 +137,31 @@ export default function FlyingObject({ onHit, upperSpeed }: FlyingObjectProps) {
                         targetRef.current.applyImpulse(impulse, true);
                     }
 
-
+                    // オブジェクトが消えるまで少し待つ
                     setTimeout(() => {
-                        setIsVisible(false); // 1秒後に非表示
-                    }, 1000);
+                        setHitEffect(false); // ヒットエフェクトをオフ
+                        setIsVisible(false); // オブジェクトを非表示
+                        console.log("visible false");
+                    }, 250); // 300ms待つ (エフェクトが十分に見える時間)
 
-                    const randomDelay = Math.floor(THREE.MathUtils.randFloat(1000, 3000)); // 再生成遅延時間
+                    // ランダムな遅延後にオブジェクトを再出現させる
+                    const randomDelay = Math.random() * 1000 + 400;
                     setTimeout(() => {
                         randomizeObject();
                         setIsVisible(true);
-                        console.log("delay");
-                    }, 1000 + randomDelay); // 非表示後の遅延時間を含める
-
-                    console.log("Collision with sword detected!");
+                        console.log("visible true");
+                    }, randomDelay + 400); // エフェクト表示時間を考慮
                 }
             }}
             position={initialPosition.toArray()}
         >
             <mesh castShadow>
-                <boxGeometry args={[0.3, 0.3, 0.3]} />
-                <meshStandardMaterial color="#f00" />
+                <meshStandardMaterial color={hitEffect ? "#ff0" : "#f00"} />
+                {geometryType === 'box' && <boxGeometry args={geometryArgs} />}
+                {geometryType === 'sphere' && <sphereGeometry args={geometryArgs} />}
+                {geometryType === 'cylinder' && <cylinderGeometry args={geometryArgs} />}
             </mesh>
         </RigidBody>
     ) : null;
 }
+

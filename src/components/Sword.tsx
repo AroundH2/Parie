@@ -4,17 +4,26 @@ import * as THREE from "three";
 import { createXRStore, XR, XROrigin, useXRInputSourceState } from "@react-three/xr";
 import { Physics, RigidBody, RapierRigidBody } from "@react-three/rapier";
 
+interface SwordProps {
+    onUpperSpeedUpdate: (speed: number) => void;
+}
+
 // 剣のコンポーネント
-export default function Sword() {
+export default function Sword({ onUpperSpeedUpdate }: SwordProps) {
     const swordRef = useRef<RapierRigidBody>(null);
     const upperSwordRef = useRef<RapierRigidBody>(null);  // 上半身部分
     const lowerSwordRef = useRef<RapierRigidBody>(null);  // 下半身部分
     const leftController = useXRInputSourceState("controller", "left"); // 左手のコントローラー
     const rightController = useXRInputSourceState("controller", "right"); // 右手のコントローラー
 
+    const prevUpperPosition = useRef(new THREE.Vector3());
+    const prevLowerPosition = useRef(new THREE.Vector3());
+    const upperSpeed = useRef(0);
+    const lowerSpeed = useRef(0);
+
     let isGrabbing = false;
 
-    useFrame(() => {
+    useFrame((state) => {
         if (rightController) {
             const rightSqueezeState = rightController.gamepad["xr-standard-squeeze"];
 
@@ -36,16 +45,26 @@ export default function Sword() {
                 rightRotation.multiply(correctionQuaternion);
 
                 if (upperSwordRef.current && lowerSwordRef.current) {
+                    const currentPosition = new THREE.Vector3(
+                        upperSwordRef.current.translation().x,
+                        upperSwordRef.current.translation().y,
+                        upperSwordRef.current.translation().z
+                    );
+                    upperSpeed.current = currentPosition.distanceTo(prevUpperPosition.current) / (1 / 60); // フレームレート補正
+                    prevUpperPosition.current.copy(currentPosition);
 
                     upperSwordRef.current.setTranslation({ x: rightPosition.x, y: rightPosition.y, z: rightPosition.z }, true);
                     upperSwordRef.current.setRotation({ x: rightRotation.x, y: rightRotation.y, z: rightRotation.z, w: rightRotation.w }, true);
-
                     lowerSwordRef.current.setTranslation({ x: rightPosition.x, y: rightPosition.y, z: rightPosition.z }, true);
                     lowerSwordRef.current.setRotation({ x: rightRotation.x, y: rightRotation.y, z: rightRotation.z, w: rightRotation.w }, true);
+                    // 現在の速度を親コンポーネントに渡す
+                    onUpperSpeedUpdate(upperSpeed.current);
+                    console.log("speed:" + upperSpeed.current);
                 }
             } else {
                 isGrabbing = false;
             }
+
         }
     });
 
@@ -66,11 +85,11 @@ export default function Sword() {
             {/* 剣の上半身部分 */}
             <RigidBody
                 ref={upperSwordRef}
-                position={[0, -0.7, 0]}
+                position={[0, -0.67, 0]}
                 type="fixed"
                 name="upper_sword"
             >
-                <mesh position={[0, -0.7, 0]} castShadow>
+                <mesh position={[0, -0.67, 0]} castShadow>
                     <boxGeometry args={[0.2, 0.3, 0.2]} />
                     <meshStandardMaterial color="#00f" />
                 </mesh>

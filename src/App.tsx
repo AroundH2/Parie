@@ -13,6 +13,8 @@ import hitSound from './assets/mp3/hit-sound.mp3';
 const store = createXRStore();
 
 function App() {
+  const [upperSpeed, setUpperSpeed] = useState(0);
+
   const successaudioRef = useRef<HTMLAudioElement | null>(null);
   const failaudioRef = useRef<HTMLAudioElement | null>(null);
   useEffect(() => {
@@ -34,9 +36,11 @@ function App() {
     if (part === "upper" && successaudioRef.current) {
       successaudioRef.current.currentTime = 0;
       successaudioRef.current.play();
+      console.log("success");
     } else if (part === "lower" && failaudioRef.current) {
       failaudioRef.current.currentTime = 0;
       failaudioRef.current.play();
+      console.log("fail");
     }
   };
 
@@ -73,8 +77,8 @@ function App() {
           <Lighting />
 
           <Physics gravity={[0, 0, 0]}>
-            <Sword />
-            <FlyingObject onHit={handleHit} />
+            <Sword onUpperSpeedUpdate={setUpperSpeed} />
+            <FlyingObject upperSpeed={upperSpeed} onHit={handleHit} />
           </Physics>
 
           <Plane rotation={[-Math.PI / 2, 0, 0]} args={[10, 10]} receiveShadow>
